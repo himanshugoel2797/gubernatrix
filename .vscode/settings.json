@@ -1,0 +1,12 @@
+{
+    "C_Cpp.default.includePath": [
+        "common/inc",
+        "kernel/inc"
+    ],
+    "files.exclude": {
+        "**/*.o": true
+    },
+    "licenser.author": "Himanshu Goel",
+    "licenser.license": "MIT",
+    "licenser.projectName": "Gubernatrix"
+}
