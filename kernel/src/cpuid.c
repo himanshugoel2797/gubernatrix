@@ -146,6 +146,11 @@ void cpuid_init(void) {
   }
 
   {
+    CPUID_RequestInfo(0x80000007, 0, &eax, &ebx, &ecx, &edx);
+    cpuinfo.tsc_invar = (edx & (1 << 8));
+  }
+
+  {
     CPUID_RequestInfo(1, 0, &eax, &ebx, &ecx, &edx);
     uint32_t stepping = eax & 0x0F;
     uint32_t model = (eax & 0xF0) >> 4;
@@ -156,6 +161,9 @@ void cpuid_init(void) {
       family += (eax & 0xFF00000) >> 20;
       model = model | ((eax & 0xF0000) >> 12);
     }
+
+    cpuinfo.tsc_valid = (edx & (1 << 4));
+    cpuinfo.tsc_deadline = (ecx & (1 << 24));
 
     // APIC frequency is the Bus frequency by default
     CPUID_RequestInfo(0x16, 0, &eax, &ebx, &ecx, &edx);

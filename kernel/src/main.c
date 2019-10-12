@@ -17,6 +17,7 @@
 #include "fpu.h"
 #include "interrupts.h"
 #include "memory.h"
+#include "timer.h"
 
 static void spurious_irq_handler(int int_num) { int_num = 0; }
 
@@ -39,7 +40,7 @@ void setup_core(void) {
   vmem_init(); // Setup virtual memory
 
   pic_fini(); // Disable PIC
-  gdt_init(); // Setup GDT
+  gdt_init(); // Setup GDT + TSS
   idt_init(); // Setup IDT
 
   int irq0 = 0x27;
@@ -59,8 +60,7 @@ void setup_core(void) {
 
   fp_platform_init(); // Setup FPU
 
-  // Setup TSS
-  // Setup Timers
+  timer_init();// Setup Timers
 }
 
 SECTION(".entry_point") int32_t main(void *param, uint64_t magic) {

@@ -14,6 +14,9 @@ typedef struct {
     uint64_t hugepage : 1;
     uint64_t x2apic : 1;
     uint64_t xsave : 1;
+    uint64_t tsc_valid : 1;
+    uint64_t tsc_deadline : 1;
+    uint64_t tsc_invar : 1;
     char processor_name[12];
     uint64_t tsc_freq;
     uint64_t apic_freq;

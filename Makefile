@@ -12,7 +12,7 @@ KERN_LDFLAGS:= -Wl,--whole-archive -Wl,--script=linker.ld -Wl,--omagic $(LDFLAGS
 
 COMMON_C_SRCS:= $(wildcard common/src/*.c)
 
-KERN_C_SRCS:= $(wildcard kernel/src/*.c) $(wildcard kernel/src/memory/*.c) $(wildcard kernel/src/interrupts/*.c)
+KERN_C_SRCS:= $(wildcard kernel/src/*.c) $(wildcard kernel/src/memory/*.c) $(wildcard kernel/src/interrupts/*.c) $(wildcard kernel/src/timers/*.c)
 KERN_ASM_SRCS:= $(wildcard kernel/src/*.S)
 
 KERN_INCS:= -I "kernel/inc/" -I "common/inc/"
