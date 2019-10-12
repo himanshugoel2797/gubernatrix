@@ -6,6 +6,8 @@
  */
 #include "cpuid.h"
 
+#include "string.h"
+
 typedef enum {
   CPUID_FEAT_ECX_SSE3 = 1 << 0,
   CPUID_FEAT_ECX_PCLMUL = 1 << 1,
@@ -69,6 +71,9 @@ typedef enum { CPUID_EAX = 0, CPUID_EBX, CPUID_ECX, CPUID_EDX } CPUID_REG;
 
 typedef enum { CPUID_ECX_IGNORE = 0, CPUID_EAX_FIRST_PAGE = 1 } CPUID_REQUESTS;
 
+#define MANUFACT_AMD 0
+#define MANUFACT_INTEL 1
+
 static uint32_t cache_line_size = 0;
 static cpuinfo_t cpuinfo;
 
@@ -89,11 +94,12 @@ static void CPUID_RequestInfo(uint32_t page, uint32_t idx, uint32_t *eax,
 
 void cpuid_init(void) {
   uint32_t eax, ebx, ecx, edx;
-  uint8_t *eax_str = (uint8_t*)&eax;
-  uint8_t *ebx_str = (uint8_t*)&ebx;
-  uint8_t *edx_str = (uint8_t*)&edx;
-  uint8_t *ecx_str = (uint8_t*)&ecx;
+  uint8_t *eax_str = (uint8_t *)&eax;
+  uint8_t *ebx_str = (uint8_t *)&ebx;
+  uint8_t *edx_str = (uint8_t *)&edx;
+  uint8_t *ecx_str = (uint8_t *)&ecx;
 
+  int cpu_manufacturer = 0;
   {
     CPUID_RequestInfo(0, 0, &eax, &ebx, &ecx, &edx);
 
@@ -109,6 +115,11 @@ void cpuid_init(void) {
     cpuinfo.processor_name[9] = ecx_str[1];
     cpuinfo.processor_name[10] = ecx_str[2];
     cpuinfo.processor_name[11] = ecx_str[3];
+
+    if (strncmp(cpuinfo.processor_name, "GenuineIntel", 12) == 0)
+      cpu_manufacturer = MANUFACT_INTEL;
+    else if (strncmp(cpuinfo.processor_name, "AuthenticAMD", 12) == 0)
+      cpu_manufacturer = MANUFACT_AMD;
   }
 
   {
@@ -121,8 +132,102 @@ void cpuid_init(void) {
     CPUID_RequestInfo(0x80000001, 0, &eax, &ebx, &ecx, &edx);
     cpuinfo.hugepage = (edx >> 26) & 1;
   }
+
+  {
+    CPUID_RequestInfo(0x1, 0, &eax, &ebx, &ecx, &edx);
+    cpuinfo.x2apic = (ecx >> 21) & 1;
+  }
+
+  {
+    CPUID_RequestInfo(1, 0, &eax, &ebx, &ecx, &edx);
+    uint32_t stepping = eax & 0x0F;
+    uint32_t model = (eax & 0xF0) >> 4;
+    uint32_t family = (eax & 0xF00) >> 8;
+    uint32_t processor_type = (eax & 0xF000) >> 12;
+
+    if (family == 15) {
+      family += (eax & 0xFF00000) >> 20;
+      model = model | ((eax & 0xF0000) >> 12);
+    }
+
+    // APIC frequency is the Bus frequency by default
+    CPUID_RequestInfo(0x16, 0, &eax, &ebx, &ecx, &edx);
+    uint32_t apic_rate = ecx & 0xFFFF;
+
+    CPUID_RequestInfo(0x15, 0, &eax, &ebx, &ecx, &edx);
+    uint32_t ratio_denom = eax;
+    uint32_t ratio_numer = ebx;
+    uint32_t clock_freq = ecx;
+    uint32_t tsc_rate = 0;
+    if (ratio_denom != 0)
+      tsc_rate = (clock_freq * ratio_numer) / ratio_denom;
+
+    // Use the processor identification to configure special information, like
+    // APIC clock rates
+    switch (cpu_manufacturer) {
+    case MANUFACT_AMD: {
+      // This method works for Zen only
+      if (tsc_rate == 0)
+        tsc_rate = (rdmsr(0xc0010064) & 0xff) * 25 * (1000 * 1000);
+
+      cpuinfo.tsc_freq = tsc_rate;
+
+      // Default to 100MHz
+      if (apic_rate == 0)
+        apic_rate = 100;
+
+      cpuinfo.apic_freq = apic_rate * 1000 * 1000;
+    } break;
+    case MANUFACT_INTEL: {
+      cpuinfo.tsc_freq = tsc_rate;
+
+      if (apic_rate == 0)
+        switch (model) {
+        // Nehalem
+        case 0x1a:
+        case 0x1e:
+        case 0x1f:
+        case 0x2e:
+
+        // Westmere
+        case 0x25:
+        case 0x2c:
+        case 0x2f: // CPUID holds, else must callibrate
+          break;
+
+        case 0x2a: // Sandy Bridge
+        case 0x2d: // Sandy Bridge EP
+        case 0x3a: // Ivy Bridge
+        case 0x3e: // Ivy Bridge EP
+        case 0x3c: // Haswell DT
+        case 0x3f: // Haswell MB
+        case 0x45: // Haswell ULT
+        case 0x46: // Haswell ULX
+        case 0x3d: // Broadwell
+        case 0x47: // Broadwell H
+        case 0x56: // Broadwell EP
+        case 0x4f: // Broadwell EX
+          // MSR_PLATFORM_INFO gives the apic rate
+          apic_rate = ((rdmsr(0xce) >> 8) & 0xFF) * 100;
+          break;
+
+        case 0x4e: // Skylake Y/U
+        case 0x5e: // Skylake H/S
+        case 0x55: // Skylake E
+
+        case 0x8e: // Kabylake Y/U
+        case 0x9e: // Kabylake H/S
+          apic_rate = 24;
+          break;
+        }
+      cpuinfo.apic_freq = apic_rate * 1000 * 1000;
+    } break;
+    default:
+      cpuinfo.tsc_freq = tsc_rate;
+      cpuinfo.apic_freq = apic_rate;
+      break;
+    }
+  }
 }
 
-cpuinfo_t* get_cpuid(void){
-  return &cpuinfo;
-}
+cpuinfo_t *get_cpuid(void) { return &cpuinfo; }

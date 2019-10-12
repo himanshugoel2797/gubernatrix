@@ -49,8 +49,6 @@ void set_bootinfo(void *boot_info, uint32_t magic) {
   print_uint32(total_size, BASE_HEX);
   print_str("\r\n");
 
-  print_hexdump(hdr_8, 1024);
-
   memset(&bootInfo, 0, sizeof(BootInfo));
   bootInfo.kernel_end_phys = kernel_end_phys;
   bootInfo.kernel_virt_offset = kernel_virt_addr;

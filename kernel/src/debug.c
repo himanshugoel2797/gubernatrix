@@ -77,4 +77,5 @@ void print_hexdump(uint8_t *data, int len) {
       else
         print_str("\r\n");
     }
+  print_str("\r\n");
 }
