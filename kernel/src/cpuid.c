@@ -6,6 +6,7 @@
  */
 #include "cpuid.h"
 
+#include "debug.h"
 #include "string.h"
 
 typedef enum {
@@ -116,10 +117,13 @@ void cpuid_init(void) {
     cpuinfo.processor_name[10] = ecx_str[2];
     cpuinfo.processor_name[11] = ecx_str[3];
 
-    if (strncmp(cpuinfo.processor_name, "GenuineIntel", 12) == 0)
+    if (strncmp(cpuinfo.processor_name, "GenuineIntel", 12) == 0) {
       cpu_manufacturer = MANUFACT_INTEL;
-    else if (strncmp(cpuinfo.processor_name, "AuthenticAMD", 12) == 0)
+      print_str("GenuineIntel\r\n");
+    } else if (strncmp(cpuinfo.processor_name, "AuthenticAMD", 12) == 0) {
       cpu_manufacturer = MANUFACT_AMD;
+      print_str("AuthenticAMD\r\n");
+    }
   }
 
   {
@@ -147,7 +151,7 @@ void cpuid_init(void) {
 
   {
     CPUID_RequestInfo(0x80000007, 0, &eax, &ebx, &ecx, &edx);
-    cpuinfo.tsc_invar = (edx & (1 << 8));
+    cpuinfo.tsc_invar = (edx >> 8) & 1;
   }
 
   {
@@ -162,8 +166,8 @@ void cpuid_init(void) {
       model = model | ((eax & 0xF0000) >> 12);
     }
 
-    cpuinfo.tsc_valid = (edx & (1 << 4));
-    cpuinfo.tsc_deadline = (ecx & (1 << 24));
+    cpuinfo.tsc_valid = (edx >> 4) & 1;
+    cpuinfo.tsc_deadline = (ecx >> 24) & 1;
 
     // APIC frequency is the Bus frequency by default
     CPUID_RequestInfo(0x16, 0, &eax, &ebx, &ecx, &edx);

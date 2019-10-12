@@ -44,5 +44,6 @@ int timer_platform_gettimercount();
 int timer_platform_init();
 
 void timer_init(void);
+void timer_mp_init(void);
 
 #endif

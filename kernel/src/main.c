@@ -7,6 +7,7 @@
 
 #include "stddef.h"
 #include "stdint.h"
+#include "stdlib.h"
 #include "types.h"
 
 #include "debug.h"
@@ -17,6 +18,7 @@
 #include "fpu.h"
 #include "interrupts.h"
 #include "memory.h"
+#include "smp.h"
 #include "timer.h"
 
 static void spurious_irq_handler(int int_num) { int_num = 0; }
@@ -58,9 +60,12 @@ void setup_core(void) {
   ioapic_init();
   apic_init();
 
+  sti(1);   //Enable interrupts
+
   fp_platform_init(); // Setup FPU
 
-  timer_init();// Setup Timers
+  timer_init(); // Setup Timers
+  smp_init();   // Setup SMP
 }
 
 SECTION(".entry_point") int32_t main(void *param, uint64_t magic) {
@@ -71,6 +76,25 @@ SECTION(".entry_point") int32_t main(void *param, uint64_t magic) {
   setup_core();
 
   print_str("Initialized\r\n");
-  halt();
+  while(true) halt();
   return 0;
+}
+
+SECTION(".tramp_handler") uint64_t tramp_stack = 0xffffffff80000000;
+void alloc_ap_stack(void) {
+  uint64_t stack = (uint64_t)malloc(4096 * 4);
+  tramp_stack = stack + 4096 * 4;
+}
+
+SECTION(".tramp_handler") void smp_bootstrap(void) {
+  tls_init();
+  vmem_mp_init();
+  gdt_init();
+  idt_init();
+  apic_init();
+  timer_mp_init();
+
+  smp_signalready();
+  while (1)
+    ;
 }

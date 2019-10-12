@@ -145,7 +145,7 @@ int vmem_init(void) {
     return 0;
 }
 
-int vmem_mp_init() {
+int vmem_mp_init(void) {
     //Enable No Execute bit
     wrmsr(EFER_MSR, rdmsr(EFER_MSR) | (1 << 11));
 

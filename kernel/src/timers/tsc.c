@@ -6,6 +6,7 @@
  */
 
 #include "string.h"
+#include "debug.h"
 
 #include "cpuid.h"
 #include "priv_timers.h"
@@ -17,6 +18,17 @@ PRIVATE bool use_tsc() {
   bool tsc_invar = get_cpuid()->tsc_invar;
   uint64_t tsc_freq = get_cpuid()->tsc_freq;
   uint64_t apic_freq = get_cpuid()->apic_freq;
+
+/*
+  if (tsc_valid) print_str("TSC Exists.\r\n");
+  if (tsc_deadline) print_str("TSC Deadline mode available.\r\n");
+  if (tsc_invar) print_str("TSC is invariant.\r\n");
+  print_str("TSC Frequency: ");
+  print_uint64(tsc_freq, BASE_HEX);
+  print_str("\r\nAPIC Frequency: ");
+  print_uint64(apic_freq, BASE_HEX);
+  print_str("\r\n");
+*/
 
   // return true;
   return (tsc_valid && tsc_deadline && tsc_invar && tsc_freq != 0 &&

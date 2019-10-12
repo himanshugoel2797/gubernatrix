@@ -50,6 +50,8 @@ void pmem_freedma(uintptr_t addr, uint32_t sz);
 
 int vmem_init(void);
 
+int vmem_mp_init(void);
+
 int vmem_map(vmem_t *vm, intptr_t virt, intptr_t phys, size_t size, int perms, int flags);
 
 int vmem_unmap(vmem_t *vm, intptr_t virt, size_t size);

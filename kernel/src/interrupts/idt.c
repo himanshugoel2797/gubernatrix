@@ -69,6 +69,7 @@ typedef struct {
   idt_t *idt;
   regs_t *reg_state;
   regs_t *reg_ref;
+  int proc_idx;
 } tls_idt_t;
 
 static TLS tls_idt_t *idt = NULL;
@@ -76,6 +77,7 @@ static char idt_handlers[IDT_ENTRY_COUNT][IDT_ENTRY_HANDLER_SIZE];
 static InterruptHandler interrupt_funcs[IDT_ENTRY_COUNT][IDT_HANDLER_CNT];
 static bool interrupt_blocked[IDT_ENTRY_COUNT];
 static int interrupt_alloc_lock = 0;
+static _Atomic int proc_idx_cntr = 0;
 static bool int_arr_inited = false;
 
 void interrupt_registerhandler(int irq, InterruptHandler handler) {
@@ -187,12 +189,9 @@ void idt_mainhandler(regs_t *regs) {
   sti(state);
 
   if (!handled) {
-    char msg[256] = "Unhandled Interrupt: ";
-    char int_num[10];
-    char *msg_ptr = strncat(msg, itoa(regs->int_no, int_num, 16), 255);
-    DEBUG_PRINT(msg_ptr);
-    
-    print_str("Unhandled Interrupt: ");
+    print_str("[Core: ");
+    print_int32(idt->proc_idx, BASE_HEX);
+    print_str("] Unhandled Interrupt: ");
     print_uint8((uint8_t)regs->int_no, BASE_HEX);
     print_str("\r\n");
     PANIC("Failure!");
@@ -336,6 +335,7 @@ void idt_init(void) {
   if (idt == NULL) {
     idt = (TLS tls_idt_t *)tls_alloc(sizeof(tls_idt_t));
   }
+  idt->proc_idx = proc_idx_cntr++;
   idt->idt = malloc(IDT_ENTRY_COUNT * sizeof(idt_t));
   idt->reg_state = malloc(sizeof(regs_t));
 
