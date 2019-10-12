@@ -14,6 +14,7 @@
 #include "acpi/tables.h"
 #include "boot_info.h"
 #include "cpuid.h"
+#include "fpu.h"
 #include "interrupts.h"
 #include "memory.h"
 
@@ -37,7 +38,6 @@ void setup_core(void) {
   pmem_init(); // Setup physical memory
   vmem_init(); // Setup virtual memory
 
-
   pic_fini(); // Disable PIC
   gdt_init(); // Setup GDT
   idt_init(); // Setup IDT
@@ -56,6 +56,8 @@ void setup_core(void) {
   acpi_intr_init(); // Initialize IOAPIC + LAPIC from acpi tables
   ioapic_init();
   apic_init();
+
+  fp_platform_init(); // Setup FPU
 
   // Setup TSS
   // Setup Timers

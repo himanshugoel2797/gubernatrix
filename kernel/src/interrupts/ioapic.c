@@ -11,9 +11,9 @@
 #include "string.h"
 #include "types.h"
 
+#include "debug.h"
 #include "interrupts.h"
 #include "memory.h"
-#include "debug.h"
 
 #include "apic_data.h"
 

@@ -136,6 +136,13 @@ void cpuid_init(void) {
   {
     CPUID_RequestInfo(0x1, 0, &eax, &ebx, &ecx, &edx);
     cpuinfo.x2apic = (ecx >> 21) & 1;
+    cpuinfo.xsave = (ecx >> 26) & 1;
+  }
+
+  {
+    CPUID_RequestInfo(0x0d, 0, &eax, &ebx, &ecx, &edx);
+    cpuinfo.xsave_sz = ecx;
+    cpuinfo.xsave_bits = (uint64_t)edx << 32 | eax;
   }
 
   {
