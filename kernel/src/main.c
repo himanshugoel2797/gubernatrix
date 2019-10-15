@@ -15,9 +15,11 @@
 #include "acpi/tables.h"
 #include "boot_info.h"
 #include "cpuid.h"
+#include "devices.h"
 #include "fpu.h"
 #include "interrupts.h"
 #include "memory.h"
+#include "pci.h"
 #include "smp.h"
 #include "timer.h"
 
@@ -60,7 +62,7 @@ void setup_core(void) {
   ioapic_init();
   apic_init();
 
-  sti(1);   //Enable interrupts
+  sti(1); // Enable interrupts
 
   fp_platform_init(); // Setup FPU
 
@@ -75,8 +77,12 @@ SECTION(".entry_point") int32_t main(void *param, uint64_t magic) {
 
   setup_core();
 
+  pci_reg_init(); // enumerate PCI devices
+  devices_load(); // register drivers for every available device
+
   print_str("Initialized\r\n");
-  while(true) halt();
+  while (true)
+    halt();
   return 0;
 }
 
@@ -92,6 +98,9 @@ SECTION(".tramp_handler") void smp_bootstrap(void) {
   gdt_init();
   idt_init();
   apic_init();
+
+  fp_platform_init();
+
   timer_mp_init();
 
   smp_signalready();
